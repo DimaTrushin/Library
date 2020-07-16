@@ -2,6 +2,7 @@
 #define ANYGLOBALACCESS_H
 
 #include <memory>
+#include <cassert>
 
 namespace NSLibrary {
 
