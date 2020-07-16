@@ -113,7 +113,7 @@ class CAnyGlobalInitializer : public CAnyGlobalAccessible<TAccessible, TID> {
   using CBase = CAnyGlobalAccessible<TAccessible, TID>;
 public:
   template<class... TArgs>
-  CAnyGlobalInitializer(TArgs&&... args) {
+  CAnyGlobalInitializer(TArgs&& ... args) {
     assert(!CBase::get());
     if (!CBase::get())
       CBase::get() = std::make_unique<TAccessible>(std::forward<TArgs>(args)...);
