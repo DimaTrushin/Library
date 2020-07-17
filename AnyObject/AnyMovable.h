@@ -77,7 +77,7 @@ namespace NSLibrary {
 // Now you can use it like this:
 // CAny x = 'c';
 // x->print();
-// x = "123";
+// x = std::move("123");
 // x->print();
 // x = 1.45;
 // x->print();
