@@ -14,7 +14,7 @@ class CSource {
 public:
   using CReturnValueType =
     std::conditional_t<
-    NSType::isArithmetic<TData>,
+    NSType::isArithmetic<TData> || NSType::isPointer<TData>,
     TData,
     NSType::ConstRefWrapp<TData>>;
   using CGetType = std::optional<CReturnValueType>;
