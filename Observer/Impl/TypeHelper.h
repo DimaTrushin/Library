@@ -16,6 +16,9 @@ template<class T>
 bool constexpr isPointer= std::is_pointer_v<T>;
 
 template<class T>
+bool constexpr isEnum= std::is_enum_v<T>;
+
+template<class T>
 using EnableIfNotRef = std::enable_if_t<!std::is_reference_v<T>>;
 
 template<class T>

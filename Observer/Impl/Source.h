@@ -12,9 +12,13 @@ namespace NSLibrary {
 template<class TData, class = NSType::EnableIfNotRef<TData>>
 class CSource {
 public:
+  static bool constexpr isPassedByValue =
+    NSType::isArithmetic<TData> ||
+    NSType::isPointer<TData> ||
+    NSType::isEnum<TData>;
   using CReturnValueType =
     std::conditional_t<
-    NSType::isArithmetic<TData> || NSType::isPointer<TData>,
+    isPassedByValue,
     TData,
     NSType::ConstRefWrapp<TData>>;
   using CGetType = std::optional<CReturnValueType>;
