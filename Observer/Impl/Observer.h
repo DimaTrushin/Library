@@ -72,23 +72,23 @@ public:
   }
 
   void onSubscribe() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnSubscribe_);
-      OnSubscribe_(data());
+      OnSubscribe_(CBase::data());
     }
   }
 
   void onNotify() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnNotify_);
-      OnNotify_(data());
+      OnNotify_(CBase::data());
     }
   }
 
   void onUnsubscribe() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnUnsubscribe_);
-      OnUnsubscribe_(data());
+      OnUnsubscribe_(CBase::data());
     }
   }
 
@@ -119,21 +119,21 @@ public:
   }
 
   void onSubscribe() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnSubscribe_);
       OnSubscribe_();
     }
   }
 
   void onNotify() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnNotify_);
       OnNotify_();
     }
   }
 
   void onUnsubscribe() {
-    if (isSubscribed()) {
+    if (CBase::isSubscribed()) {
       assert(OnUnsubscribe_);
       OnUnsubscribe_();
     }
@@ -170,7 +170,7 @@ public:
   }
 
   void unsubscribe() {
-    Connection().unsubscribe();
+    CBase::Connection().unsubscribe();
   }
 
   void setSubscribe(CMethod OnSubscribe) {

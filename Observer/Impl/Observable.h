@@ -36,7 +36,7 @@ public:
 
   void notify() {
     for (CObserver<CData>* Observer : Observers_)
-      notify(Observer);
+      notifyOne(Observer);
   }
 
 protected:
@@ -70,7 +70,7 @@ protected:
   }
 
 private:
-  void notify(CObserver<CData>* Observer);
+  void notifyOne(CObserver<CData>* Observer);
   void unsubscribeAll();
 
   CObserverContainer Observers_;
@@ -142,7 +142,7 @@ public:
   void setSource(CGetAction Action) {
     assert(Action);
     Source_.set(std::move(Action));
-    notify();
+    CBase::notify();
   }
 
 protected:
