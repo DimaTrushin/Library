@@ -25,24 +25,24 @@ protected:
 
 template<class TData>
 class CObservableData : protected CStorage<TData>, protected CObservable<TData> {
-  using CStorage = CStorage<TData>;
-  using CObservable = CObservable<TData>;
+  using CStorageBase = CStorage<TData>;
+  using CObservableBase = CObservable<TData>;
 public:
   template<class... TArgs>
   CObservableData(TArgs&& ... args)
-    : CStorage(std::forward<TArgs>(args)...),
-      CObservable([&Data = CStorage::Data_]() -> typename CSource<TData>::CGetType {
+    : CStorageBase(std::forward<TArgs>(args)...),
+      CObservableBase([&Data = CStorageBase::Data_]() -> typename CSource<TData>::CGetType {
     return Data;
   }) {}
 
   template<class... TArgs>
   void set(TArgs&& ... args) {
-    CStorage::set(std::forward<TArgs>(args)...);
-    CObservable::notify();
+    CStorageBase::set(std::forward<TArgs>(args)...);
+    CObservableBase::notify();
   }
 
-  using CObservable::subscribe;
-  using CObservable::notify;
+  using CObservableBase::subscribe;
+  using CObservableBase::notify;
 };
 } // NSObservableDataDetail
 

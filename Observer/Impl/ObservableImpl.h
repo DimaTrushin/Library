@@ -8,7 +8,7 @@ namespace NSLibrary {
 
 namespace NSObservableDetail {
 template<class TData>
-void CObservableBase<TData>::notify(CObserver<CData>* Observer) {
+void CObservableBase<TData>::notifyOne(CObserver<CData>* Observer) {
   assert(Observer);
   Observer->onNotify();
 }
@@ -39,8 +39,8 @@ void CSubscriberImpl<TData, TBase>::subscribe(CObserver<CData>* Observer) {
   assert(Observer);
   if (Observer->isSubscribed())
     Observer->unsubscribe();
-  observers()->push_back(Observer);
-  Observer->_setConnection(makeConnection(Observer));
+  CBase::observers()->push_back(Observer);
+  Observer->_setConnection(CBase::makeConnection(Observer));
   Observer->onSubscribe();
 }
 
