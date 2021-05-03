@@ -3,7 +3,6 @@
 
 #include <memory>
 
-
 namespace NSLibrary {
 
 //---------------------------------------------------------------------------
@@ -94,26 +93,28 @@ namespace NSLibrary {
 //
 //---------------------------------------------------------------------------
 
-
-template< template<class>class TInterface,
-          template<class, class>class TImplementation>
+template<template<class> class TInterface,
+         template<class, class> class TImplementation>
 class CAnyMovable {
   class IObjectStored;
   using CStoredPtr = std::unique_ptr<IObjectStored>;
   template<class T>
   using CObjType = std::remove_reference_t<T>;
+
 public:
   CAnyMovable() = default;
 
   template<class T>
   CAnyMovable(T&& Object)
-    : pIObject_(std::make_unique<CObjectStored<CObjType<T>>>(std::forward<T>(Object))) {
+      : pIObject_(std::make_unique<CObjectStored<CObjType<T>>>(
+            std::forward<T>(Object))) {
   }
 
   template<class T, class... TArgs>
-  CAnyMovable(std::in_place_type_t<T>,TArgs&& ... args)
-    : pIObject_(std::make_unique<CObjectStored<T>>(std::forward<TArgs>(args)...)) {}
-
+  CAnyMovable(std::in_place_type_t<T>, TArgs&&... args)
+      : pIObject_(
+            std::make_unique<CObjectStored<T>>(std::forward<TArgs>(args)...)) {
+  }
 
   CAnyMovable(const CAnyMovable& Other) = delete;
 
@@ -143,8 +144,9 @@ public:
   }
 
   template<class TObject, class... TArgs>
-  void emplace(TArgs&& ... args) {
-    pIObject_ = std::make_unique<CObjectStored<TObject>>(std::forward<TArgs>(args)...);
+  void emplace(TArgs&&... args) {
+    pIObject_ =
+        std::make_unique<CObjectStored<TObject>>(std::forward<TArgs>(args)...);
   }
 
   void clear() {
@@ -158,24 +160,24 @@ private:
   class IObjectStored : public TInterface<IEmpty> {
   public:
     inline ~IObjectStored() override = default;
+
   protected:
     friend class CAnyMoveable;
   };
-
 
   template<class TObject>
   class CObjectKeeper : public IObjectStored {
   public:
     using CObjectType = TObject;
 
-    CObjectKeeper(TObject&& Object) noexcept
-      : Object_(std::move(Object)) {
+    CObjectKeeper(TObject&& Object) noexcept : Object_(std::move(Object)) {
     }
 
     ~CObjectKeeper() override = default;
 
     template<class... TArgs>
-    CObjectKeeper(TArgs&& ... args) : Object_(std::forward<TArgs>(args)...) {}
+    CObjectKeeper(TArgs&&... args) : Object_(std::forward<TArgs>(args)...) {
+    }
 
   protected:
     TObject& Object() {
@@ -198,7 +200,8 @@ private:
     using CObjectType = CBaseType[Tsize];
 
     CObjectKeeper(CObjectType&& Object) noexcept
-      : CObjectKeeper(std::move(Object), std::make_integer_sequence <size_t, Tsize> {}) {
+        : CObjectKeeper(std::move(Object),
+                        std::make_integer_sequence<size_t, Tsize>{}) {
     }
 
     ~CObjectKeeper() override = default;
@@ -211,22 +214,22 @@ private:
     const CObjectType& Object() const {
       return Object_;
     }
-  private:
 
+  private:
     template<size_t... TIndex>
-    CObjectKeeper(CObjectType&& Object, std::integer_sequence<size_t, TIndex...>) noexcept
-      : Object_ {
-      std::move(Object[TIndex])...
-    } {}
+    CObjectKeeper(CObjectType&& Object,
+                  std::integer_sequence<size_t, TIndex...>) noexcept
+        : Object_{std::move(Object[TIndex])...} {
+    }
 
     CObjectType Object_;
   };
 
-
   template<class TObject>
-  class CObjectStored :
-    public TImplementation<CObjectKeeper<TObject>, TObject> {
+  class CObjectStored
+      : public TImplementation<CObjectKeeper<TObject>, TObject> {
     using CBase = TImplementation<CObjectKeeper<TObject>, TObject>;
+
   public:
     using CBase::CBase;
 
@@ -246,6 +249,6 @@ private:
   CStoredPtr pIObject_;
 };
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // ANYMOVABLE_H

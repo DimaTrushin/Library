@@ -12,15 +12,11 @@ namespace NSLibrary {
 template<class TData, class = NSType::EnableIfNotRef<TData>>
 class CSource {
 public:
-  static bool constexpr isPassedByValue =
-    NSType::isArithmetic<TData> ||
-    NSType::isPointer<TData> ||
-    NSType::isEnum<TData>;
+  static bool constexpr isPassedByValue = NSType::isArithmetic<TData> ||
+                                          NSType::isPointer<TData> ||
+                                          NSType::isEnum<TData>;
   using CReturnValueType =
-    std::conditional_t<
-    isPassedByValue,
-    TData,
-    NSType::ConstRefWrapp<TData>>;
+      std::conditional_t<isPassedByValue, TData, NSType::ConstRefWrapp<TData>>;
   using CGetType = std::optional<CReturnValueType>;
   using CGetSignature = CGetType();
   using CGetAction = std::function<CGetSignature>;
@@ -72,6 +68,6 @@ private:
   CGetAction GetAction_ = getNothing;
 };
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // IMPL_SOURCE_H

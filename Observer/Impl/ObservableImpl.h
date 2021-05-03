@@ -33,7 +33,6 @@ void CObservableBase<TData>::CUnsubscriber::unsubscribe() {
   Observer_ = nullptr;
 }
 
-
 template<class TData, class TBase>
 void CSubscriberImpl<TData, TBase>::subscribe(CObserver<CData>* Observer) {
   assert(Observer);
@@ -44,7 +43,7 @@ void CSubscriberImpl<TData, TBase>::subscribe(CObserver<CData>* Observer) {
   Observer->onSubscribe();
 }
 
-} // NSObservableDetail
-} // NSLibrary
+} // namespace NSObservableDetail
+} // namespace NSLibrary
 
 #endif // IMPL_OBSERVABLEIMPL_H

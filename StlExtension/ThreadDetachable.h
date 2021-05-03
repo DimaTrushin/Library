@@ -7,9 +7,11 @@ namespace NSLibrary {
 
 class CThreadDetachable {
   using CThread = std::thread;
+
 public:
   template<class... TArgs>
-  CThreadDetachable(TArgs... args) : Thread_(std::forward<TArgs>(args)...) {}
+  CThreadDetachable(TArgs... args) : Thread_(std::forward<TArgs>(args)...) {
+  }
   ~CThreadDetachable() {
     if (Thread_.joinable())
       Thread_.detach();
@@ -21,6 +23,6 @@ private:
   CThread Thread_;
 };
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // THREADDETACHABLE_H

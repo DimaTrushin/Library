@@ -1,8 +1,8 @@
 #ifndef ANYGLOBALACCESS_H
 #define ANYGLOBALACCESS_H
 
-#include <memory>
 #include <cassert>
+#include <memory>
 
 namespace NSLibrary {
 
@@ -51,7 +51,8 @@ namespace NSLibrary {
 // public:
 //   using CBase::CBase;
 // };
-// class CLoggerCounterAccess : public CAnyGlobalAccess<int, CLoggerCounterID> {};
+// class CLoggerCounterAccess : public CAnyGlobalAccess<int, CLoggerCounterID>
+// {};
 //
 // Then in code we write something like that:
 // ...
@@ -66,6 +67,7 @@ namespace NSLibrary {
 template<class TAccessible, class TID>
 class CAnyGlobalAccessible {
   using CAccessibleType = std::unique_ptr<TAccessible>;
+
 protected:
   inline ~CAnyGlobalAccessible() = default;
 
@@ -75,10 +77,10 @@ protected:
   }
 };
 
-
 template<class TAccessible, class TID>
 class CAnyGlobalAccess : public CAnyGlobalAccessible<TAccessible, TID> {
   using CBase = CAnyGlobalAccessible<TAccessible, TID>;
+
 public:
   CAnyGlobalAccess() {
     assert(CBase::get());
@@ -107,19 +109,20 @@ public:
   }
 };
 
-
 template<class TAccessible, class TID>
 class CAnyGlobalInitializer : public CAnyGlobalAccessible<TAccessible, TID> {
   using CBase = CAnyGlobalAccessible<TAccessible, TID>;
+
 public:
   template<class... TArgs>
-  CAnyGlobalInitializer(TArgs&& ... args) {
+  CAnyGlobalInitializer(TArgs&&... args) {
     assert(!CBase::get());
     if (!CBase::get())
-      CBase::get() = std::make_unique<TAccessible>(std::forward<TArgs>(args)...);
+      CBase::get() =
+          std::make_unique<TAccessible>(std::forward<TArgs>(args)...);
   }
 };
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // ANYGLOBALACCESS_H

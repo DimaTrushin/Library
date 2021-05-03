@@ -52,20 +52,19 @@ private:
   CConnection Connection_{};
 };
 
-
 template<class TData, class TBase>
 class CObserverReactorImpl : public TBase {
   using CArgType = typename TBase::CGetType;
   using CBase = TBase;
-public:
 
+public:
   using CData = TData;
   using CMethod = std::function<void(CArgType)>;
 
-  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify, CMethod OnUnsubscribe)
-    : OnSubscribe_(std::move(OnSubscribe)),
-      OnNotify_(std::move(OnNotify)),
-      OnUnsubscribe_(std::move(OnUnsubscribe)) {
+  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify,
+                       CMethod OnUnsubscribe)
+      : OnSubscribe_(std::move(OnSubscribe)), OnNotify_(std::move(OnNotify)),
+        OnUnsubscribe_(std::move(OnUnsubscribe)) {
     assert(OnSubscribe_);
     assert(OnNotify_);
     assert(OnUnsubscribe_);
@@ -92,7 +91,8 @@ public:
     }
   }
 
-  static void doNothing(CArgType) {}
+  static void doNothing(CArgType) {
+  }
 
 protected:
   CMethod OnSubscribe_;
@@ -100,19 +100,18 @@ protected:
   CMethod OnUnsubscribe_;
 };
 
-
 template<class TBase>
 class CObserverReactorImpl<void, TBase> : public TBase {
   using CBase = TBase;
-public:
 
+public:
   using CData = void;
   using CMethod = std::function<void(void)>;
 
-  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify, CMethod OnUnsubscribe)
-    : OnSubscribe_(std::move(OnSubscribe)),
-      OnNotify_(std::move(OnNotify)),
-      OnUnsubscribe_(std::move(OnUnsubscribe)) {
+  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify,
+                       CMethod OnUnsubscribe)
+      : OnSubscribe_(std::move(OnSubscribe)), OnNotify_(std::move(OnNotify)),
+        OnUnsubscribe_(std::move(OnUnsubscribe)) {
     assert(OnSubscribe_);
     assert(OnNotify_);
     assert(OnUnsubscribe_);
@@ -139,7 +138,8 @@ public:
     }
   }
 
-  static void doNothing() {}
+  static void doNothing() {
+  }
 
 protected:
   CMethod OnSubscribe_;
@@ -147,23 +147,22 @@ protected:
   CMethod OnUnsubscribe_;
 };
 
-
 template<class TBase>
 using CObserverReactor = CObserverReactorImpl<typename TBase::CData, TBase>;
-
 
 template<class TData>
 class CObserver : public CObserverReactor<CObserverBase<TData>> {
   using CBase = CObserverReactor<CObserverBase<TData>>;
+
 public:
   using CData = TData;
   using CMethod = typename CBase::CMethod;
 
   template<class T1, class T2, class T3>
   CObserver(T1&& OnSubscribe, T2&& OnNotify, T3&& OnUnsubscribe)
-    : CBase(std::forward<T1>(OnSubscribe),
-            std::forward<T2>(OnNotify),
-            std::forward<T3>(OnUnsubscribe)) {}
+      : CBase(std::forward<T1>(OnSubscribe), std::forward<T2>(OnNotify),
+              std::forward<T3>(OnUnsubscribe)) {
+  }
 
   ~CObserver() {
     unsubscribe();
@@ -188,11 +187,11 @@ public:
     CBase::OnUnsubscribe_ = std::move(OnUnsubscribe);
   }
 };
-} // NSObserverDetail
+} // namespace NSObserverDetail
 
 template<class TData>
 using CObserver = NSObserverDetail::CObserver<TData>;
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // IMPL_OBSERVER_H

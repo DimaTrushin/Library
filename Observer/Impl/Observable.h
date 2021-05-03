@@ -20,7 +20,6 @@ namespace NSObservableDetail {
 template<class TData>
 class CObservableBase {
 public:
-
   using CData = TData;
   using CObserverContainer = std::list<CObserver<CData>*>;
 
@@ -44,7 +43,7 @@ protected:
   public:
     CUnsubscriber() = default;
     CUnsubscriber(CObserver<TData>* Observer, CObserverContainer* Observers)
-      : Observer_(Observer), Observers_(Observers) {
+        : Observer_(Observer), Observers_(Observers) {
       assert(Observer_);
       assert(Observers_);
     }
@@ -76,12 +75,12 @@ private:
   CObserverContainer Observers_;
 };
 
-
 template<class TData, class TBase>
 class CConnectorImpl : public TBase {
   using CBase = TBase;
   using CBase::CBase;
   using CGetAction = typename CSource<TData>::CGetAction;
+
 public:
   class CConnection {
   public:
@@ -91,8 +90,7 @@ public:
 
     CConnection() = default;
     CConnection(CUnsubscriber Unsubscriber, CSource<TData>* Source)
-      : Unsubscriber_(std::move(Unsubscriber)),
-        Source_(Source) {
+        : Unsubscriber_(std::move(Unsubscriber)), Source_(Source) {
       assert(Unsubscriber_.isSubscribed());
       assert(Source_);
     }
@@ -155,11 +153,11 @@ private:
   CSource<TData> Source_{};
 };
 
-
 template<class TBase>
 class CConnectorImpl<void, TBase> : public TBase {
   using CBase = TBase;
   using CBase::CBase;
+
 public:
   class CConnection {
   public:
@@ -168,8 +166,7 @@ public:
     using CGetAction = void;
 
     CConnection() = default;
-    CConnection(CUnsubscriber Unsubscriber)
-      : Unsubscriber_(Unsubscriber) {
+    CConnection(CUnsubscriber Unsubscriber) : Unsubscriber_(Unsubscriber) {
       assert(Unsubscriber_.isSubscribed());
     }
 
@@ -194,33 +191,30 @@ protected:
   }
 };
 
-
 template<class TBase>
 using CConnector = CConnectorImpl<typename TBase::CData, TBase>;
-
 
 template<class TData, class TBase>
 class CSubscriberImpl : public TBase {
   using CBase = TBase;
   using CBase::CBase;
   using CData = typename CBase::CData;
+
 public:
   void subscribe(CObserver<CData>* Observer);
 };
 
-
 template<class TBase>
 using CObservableSubscriber = CSubscriberImpl<typename TBase::CData, TBase>;
-
 
 template<class TData>
 using CObservable = CObservableSubscriber<CConnector<CObservableBase<TData>>>;
 
-} // NSObservableDetail
+} // namespace NSObservableDetail
 
 template<class TData>
 using CObservable = NSObservableDetail::CObservable<TData>;
 
-} // NSLibrary
+} // namespace NSLibrary
 
 #endif // IMPL_OBSERVABLE_H
