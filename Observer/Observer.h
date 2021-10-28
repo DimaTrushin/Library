@@ -133,7 +133,7 @@ class CHotInput : public CObserverHotStrict<TData> {
 
 public:
   template<class T>
-  CHotInput(T Action) : CBase(Action, Action) {
+  CHotInput(const T& Action) : CBase(Action, Action) {
   }
 };
 
@@ -160,7 +160,7 @@ class CHotActiveInput : public CObserver<TData> {
 
 public:
   template<class T>
-  CHotActiveInput(T Action)
+  CHotActiveInput(const T& Action)
       : CBase(
             [Action, this](typename CBase::CGetType optData) {
               if (optData.has_value()) {
@@ -200,7 +200,7 @@ class CColdActiveInput : public CObserver<TData> {
 
 public:
   template<class T>
-  CColdActiveInput(T Action)
+  CColdActiveInput(const T& Action)
       : CBase(
             CObserver<TData>::doNothing,
             [Action, this](typename CBase::CGetType optData) {
