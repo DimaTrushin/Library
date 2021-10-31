@@ -160,6 +160,13 @@ public:
     TreeBase_.clear();
   }
 
+  const CData& dataRoot() const {
+    return data_(kRootIndex);
+  }
+  CData& dataRoot() {
+    return data(kRootIndex);
+  }
+
 protected:
   bool isCorrect_(CIndex Index) const {
     return 0 <= Index && size_t(Index) < TreeBase_.size();
@@ -907,12 +914,14 @@ protected:
            template<class> class TTravellingLogic, class TIteratorDefines>
   class CIteratorTemplate;
 
+public:
   using CConstSiblingIterator =
       CIteratorTemplate<CDataReference, CSiblingLogic, CConstIteratorDefines>;
 
   using CSiblingIterator =
       CIteratorTemplate<CDataReference, CSiblingLogic, CIteratorDefines>;
 
+protected:
   template<class TIteratorWithTravellingLogic, class TIteratorDefines>
   class CIteratorChildren;
 
