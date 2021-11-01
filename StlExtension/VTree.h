@@ -1016,7 +1016,7 @@ protected:
     }
 
     CChildIterator FirstChild() const {
-      return CChildIterator(CBase::Host_, CBase::lastChildIndex_());
+      return CChildIterator(CBase::Host_, CBase::firstChildIndex_());
     }
     CChildIterator LastChild() const {
       return CChildIterator(CBase::Host_, CBase::lastChildIndex_());
