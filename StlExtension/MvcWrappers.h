@@ -16,7 +16,15 @@ public:
       : Impl_(std::make_unique<TImpl>(std::forward<TArgs>(args)...)) {
   }
 
-  TImpl* operator->() const {
+  bool isDefined() const {
+    return Impl_.operator bool();
+  }
+
+  const TImpl* operator->() const {
+    return Impl_.get();
+  }
+
+  TImpl* operator->() {
     return Impl_.get();
   }
 
