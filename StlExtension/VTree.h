@@ -416,7 +416,7 @@ protected:
       CIndex EndHandler = getSubTreeEndHandler();
       CIndex NumberOfLeaves = 0;
       for (CIndex Current = Current_; Current != EndHandler; ++Current)
-        if (Host_->hasChildren_(Current))
+        if (!Host_->hasChildren_(Current))
           ++NumberOfLeaves;
       assert(NumberOfLeaves > 0);
       return NumberOfLeaves;
