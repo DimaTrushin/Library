@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <type_traits>
 #include <vector>
 
 namespace NSLibrary {
@@ -102,6 +103,551 @@ private:
   CIndex DistanceToRoot_ = 0;
 };
 
+template<class TType>
+class CVTree;
+
+template<class T>
+class CIteratorDefines {
+public:
+  using CIndex = int64_t;
+  using CData = T;
+  using value_type = CData;
+  using difference_type = CIndex;
+  using pointer = value_type*;
+  using reference = value_type&;
+  using CNode = std::conditional_t<std::is_const_v<T>, const CVTreeNode<T>,
+                                   CVTreeNode<T>>;
+  using CHostTreePtr =
+      std::conditional_t<std::is_const_v<T>,
+                         // It is important to have non-const data here
+                         const CVTree<std::remove_const_t<T>>*, CVTree<T>*>;
+  using CNodeRef = CNode&;
+
+protected:
+  ~CIteratorDefines() = default;
+};
+
+template<class TDefBase>
+class CBaseIterator : public TDefBase {
+
+public:
+  template<class TOtherBase>
+  friend class CBaseIterator;
+
+  using value_type = typename TDefBase::value_type;
+  using difference_type = typename TDefBase::difference_type;
+  using pointer = typename TDefBase::pointer;
+  using reference = typename TDefBase::reference;
+  using CIndex = typename TDefBase::CIndex;
+  using CHostTreePtr = typename TDefBase::CHostTreePtr;
+  using CNode = typename TDefBase::CNode;
+
+  using CMeNonConst =
+      CBaseIterator<CIteratorDefines<std::remove_const_t<value_type>>>;
+
+  static constexpr const CIndex kUndefined = -1;
+
+  CBaseIterator() = default;
+  CBaseIterator(CHostTreePtr HostTree, CIndex Current)
+      : Host_(HostTree), Current_(Current) {
+  }
+  CBaseIterator(const CBaseIterator& other) = default;
+  CBaseIterator(CBaseIterator&& other) noexcept
+      : Host_(std::move(other.Host_)), Current_(std::move(other.Current_)) {
+    other.Host_ = nullptr;
+    other.Current_ = kUndefined;
+  }
+  CBaseIterator& operator=(const CBaseIterator& other) = default;
+  CBaseIterator& operator=(CBaseIterator&& other) noexcept {
+    Host_ = std::move(other.Host_);
+    Current_ = std::move(other.Current_);
+    other.Host_ = nullptr;
+    other.Current_ = kUndefined;
+    return *this;
+  }
+
+  template<class TIterDefs>
+  bool operator==(const CBaseIterator<TIterDefs>& Iterator) const {
+    return Host_ == Iterator.Host_ && Current_ == Iterator.Current_;
+  }
+  template<class TIterDefs>
+  bool operator!=(const CBaseIterator<TIterDefs>& Iterator) const {
+    return !(*this == Iterator);
+  }
+
+  bool isDefined() const {
+    return isHostDefined_() && isCorrect_();
+  }
+  bool isRoot() const;
+  bool isLeaf() const;
+  bool hasParent() const;
+  bool hasChildren() const;
+  bool hasNextSibling() const;
+  bool hasPreviousSibling() const;
+
+  CIndex getNumberOfChildren() const;
+  CIndex getSizeOfSubTree() const;
+  CIndex getNumberOfSiblings() const;
+  CIndex getLengthOfSubTree() const;
+  CIndex getNumberOfLeaves() const;
+  CIndex getDistanceToRoot() const;
+  CIndex getHostSize() const;
+
+  void setToParent() {
+    assert(hasParent());
+    Current_ = parentIndex_();
+  }
+  void setToFirstChild() {
+    assert(hasChildren());
+    Current_ = firstChildIndex_();
+  }
+  void setToLastChild() {
+    assert(hasChildren());
+    Current_ = lastChildIndex_();
+  }
+  void setToNextSibling() {
+    assert(hasNextSibling());
+    Current_ = nextSiblingIndex_();
+  }
+  void setToPreviousSibling() {
+    assert(hasPreviousSibling());
+    Current_ = previousSiblingIndex_();
+  }
+
+  void addLastChild(const value_type& NodeData);
+  void addLastChild(value_type&& NodeData);
+
+protected:
+  bool isHostDefined_() const {
+    return Host_ != nullptr;
+  }
+  bool isCurrentInFullRange_() const;
+  bool isCorrect_() const;
+
+  CIndex parentIndex() const;
+  CIndex& parentIndex();
+  CIndex firstChildIndex() const;
+  CIndex& firstChildIndex();
+  CIndex lastChildIndex() const;
+  CIndex& lastChildIndex();
+  CIndex previousSiblingIndex() const;
+  CIndex& previousSiblingIndex();
+  CIndex nextSiblingIndex() const;
+  CIndex& nextSiblingIndex();
+
+  CIndex parentIndex_() const;
+  CIndex firstChildIndex_() const;
+  CIndex lastChildIndex_() const;
+  CIndex previousSiblingIndex_() const;
+  CIndex nextSiblingIndex_() const;
+
+  CIndex numberOfChildren() const;
+  CIndex& numberOfChildren();
+
+  CIndex getSubTreeEndHandler() const {
+    CBaseIterator Current(*this);
+    while (!Current.isRoot() && !Current.hasNextSibling())
+      Current.setToParent();
+    if (Current.hasNextSibling())
+      return Current.nextSiblingIndex_();
+    return getHostSize();
+  }
+
+  CNode& getNode(const CIndex& Index);
+  const CNode& getNode(const CIndex& Index) const;
+
+  CNode& getCurrentNode() {
+    return getNode(Current_);
+  }
+  const CNode& getCurrentNode() const {
+    return getNode(Current_);
+  }
+  CNode& getParentNode() {
+    return getNode(parentIndex_());
+  }
+  const CNode& getParentNode() const {
+    return getNode(parentIndex_());
+  }
+  CNode& getFirstChildNode() {
+    return getNode(firstChildIndex_());
+  }
+  const CNode& getFirstChildNode() const {
+    return getNode(firstChildIndex_());
+  }
+  CNode& getLastChildNode() {
+    return getNode(lastChildIndex_());
+  }
+  const CNode& getLastChildNode() const {
+    return getNode(lastChildIndex_());
+  }
+  CNode& getPreviousSiblingNode() {
+    return getNode(previousSiblingIndex_());
+  }
+  const CNode& getPreviousSiblingNode() const {
+    return getNode(previousSiblingIndex_());
+  }
+  CNode& getNextSiblingNode() {
+    return getNode(nextSiblingIndex_());
+  }
+  const CNode& getNextSiblingNode() const {
+    return getNode(nextSiblingIndex_());
+  }
+
+  ~CBaseIterator() = default;
+
+  CHostTreePtr Host_ = nullptr;
+  CIndex Current_ = 0;
+};
+
+template<class TBBase>
+class CNodeReference;
+
+template<class TBBase>
+class CDataReference : public TBBase {
+public:
+  using CBase = TBBase;
+  using reference = typename CBase::reference;
+  using pointer = typename CBase::pointer;
+
+  using CMeNonConst = CDataReference<typename CBase::CMeNonConst>;
+
+  using CBase::CBase;
+  CDataReference() = default;
+
+  template<class TOtherBase>
+  friend class CDataReference;
+
+  template<class TOtherBase>
+  friend class CNodeReference;
+
+  reference operator*() const;
+  pointer operator->() const;
+};
+
+template<class TBBase>
+class CNodeReference : public TBBase {
+public:
+  using CBase = TBBase;
+  using CNodeRef = typename CBase::CNodeRef;
+  using CNodePtr = typename CBase::CNode*;
+
+  using CMeNonConst = CNodeReference<typename CBase::CMeNonConst>;
+
+  using CBase::CBase;
+
+  CNodeReference() = default;
+  CNodeReference(const CDataReference<TBBase>& other)
+      : CBase(other.Host_, other.Current_) {
+  }
+
+  CNodeRef operator*() const;
+  CNodePtr operator->() const;
+};
+
+template<class TRefBase>
+class CPreOrderLogic : public TRefBase {
+public:
+  using CBase = TRefBase;
+  using CHostTreePtr = typename CBase::CHostTreePtr;
+  // using CNodePtr = typename CBase::CNode*;
+
+  using CMeNonConst = CPreOrderLogic<typename CBase::CMeNonConst>;
+
+  using CBase::CBase;
+
+  template<class TOtherBase>
+  bool operator<(const CPreOrderLogic<TOtherBase>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return false;
+    return CBase::Current_ < other.Current_;
+  }
+  template<class TOtherBase>
+  bool operator<=(const CPreOrderLogic<TOtherBase>& other) const {
+    return !(other < *this);
+  }
+  template<class TOtherBase>
+  bool operator>(const CPreOrderLogic<TOtherBase>& other) const {
+    return other < *this;
+  }
+  template<class TOtherBase>
+  bool operator>=(const CPreOrderLogic<TOtherBase>& other) const {
+    return !(*this < other);
+  }
+
+protected:
+  void setToNext() {
+    assert(CBase::isHostDefined_());
+    ++CBase::Current_;
+  }
+  void setToPrevious() {
+    assert(CBase::isHostDefined_());
+    --CBase::Current_;
+  }
+  void moveByOffset(typename CBase::difference_type Offset) {
+    assert(CBase::isHostDefined_());
+    CBase::Current_ += Offset;
+    assert(CBase::isCurrentInFullRange_());
+  }
+  template<class TIterWithDeref>
+  typename CBase::difference_type
+  subtract(const CPreOrderLogic<TIterWithDeref>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return 0;
+    return CBase::Current_ - other.Current_;
+  }
+
+  ~CPreOrderLogic() = default;
+};
+
+template<class TRefBase>
+class CLastSonLogic : public TRefBase {
+public:
+  template<class TOtherBase>
+  friend class CLastSonLogic;
+
+  using CBase = TRefBase;
+  using CHostTreePtr = typename CBase::CHostTreePtr;
+  // using CNodePtr = typename CBase::CNode*;
+
+  using CMeNonConst = CLastSonLogic<typename CBase::CMeNonConst>;
+
+  using CBase::CBase;
+
+  template<class TOtherBase>
+  bool operator<(const CLastSonLogic<TOtherBase>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return false;
+    return CBase::Current_ < other.Current_;
+  }
+  template<class TOtherBase>
+  bool operator<=(const CLastSonLogic<TOtherBase>& other) const {
+    return !(other < *this);
+  }
+  template<class TOtherBase>
+  bool operator>(const CLastSonLogic<TOtherBase>& other) const {
+    return other < *this;
+  }
+  template<class TOtherBase>
+  bool operator>=(const CLastSonLogic<TOtherBase>& other) const {
+    return !(*this < other);
+  }
+
+protected:
+  void setToNext() {
+    assert(CBase::isHostDefined_());
+    if (CBase::hasChildren())
+      CBase::setToLastChild();
+    else
+      CBase::Current_ = CBase::getHostSize();
+  }
+  void setToPrevious() {
+    assert(CBase::isHostDefined_());
+    if (CBase::isCorrect_()) {
+      assert(CBase::hasParent());
+      CBase::setToParent();
+    } else {
+      assert(CBase::Current_ > 0);
+      --(CBase::Current_);
+    }
+  }
+  void moveByOffset(typename CBase::difference_type Offset) {
+    assert(CBase::isHostDefined_());
+    while (Offset > 0) {
+      --Offset;
+      setToNext();
+    }
+    while (Offset < 0) {
+      ++Offset;
+      setToPrevious();
+    }
+    assert(CBase::isCurrentInFullRange_());
+  }
+  template<class TOtherBase>
+  typename CBase::difference_type
+  subtract(const CLastSonLogic<TOtherBase>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return 0;
+    typename CBase::difference_type difference = 0;
+    CLastSonLogic current = *this;
+    while (current < other) {
+      current.setToNext();
+      ++difference;
+    }
+    while (current > other) {
+      current.setToPrevious();
+      ++difference;
+    }
+    return difference;
+  }
+
+  ~CLastSonLogic() = default;
+};
+
+template<class TRefBase>
+class CSiblingLogic : public TRefBase {
+public:
+  template<class TOther>
+  friend class CSiblingLogic;
+
+  using CBase = TRefBase;
+  using CHostTreePtr = typename CBase::CHostTreePtr;
+  // using CNodePtr = typename CBase::CNode*;
+
+  using CMeNonConst = CSiblingLogic<typename CBase::CMeNonConst>;
+
+  using CBase::CBase;
+
+  template<class TOtherBase>
+  bool operator<(const CSiblingLogic<TOtherBase>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return false;
+    return CBase::Current_ < other.Current_;
+  }
+  template<class TOtherBase>
+  bool operator<=(const CSiblingLogic<TOtherBase>& other) const {
+    return !(other < *this);
+  }
+  template<class TOtherBase>
+  bool operator>(const CSiblingLogic<TOtherBase>& other) const {
+    return other < *this;
+  }
+  template<class TOtherBase>
+  bool operator>=(const CSiblingLogic<TOtherBase>& other) const {
+    return !(*this < other);
+  }
+
+protected:
+  void setToNext() {
+    assert(CBase::hasNextSibling());
+    CBase::setToNextSibling();
+  }
+  void setToPrevious() {
+    assert(CBase::hasPreviousSibling());
+    CBase::setToPreviousSibling();
+  }
+  void moveByOffset(typename CBase::difference_type Offset) {
+    assert(CBase::isHostDefined_());
+    while (Offset > 0) {
+      --Offset;
+      setToNext();
+    }
+    while (Offset < 0) {
+      ++Offset;
+      setToPrevious();
+    }
+    assert(CBase::isCurrentInFullRange_());
+  }
+  template<class TOtherBase>
+  typename CBase::difference_type
+  subtract(const CSiblingLogic<TOtherBase>& other) const {
+    assert(CBase::Host_ == other.Host_);
+    if (!CBase::isHostDefined_())
+      return 0;
+    typename CBase::difference_type difference = 0;
+    auto current = *this;
+    while (current < other) {
+      current.setToNext();
+      ++difference;
+    }
+    while (current > other) {
+      current.setToPrevious();
+      ;
+      ++difference;
+    }
+    return difference;
+  }
+  ~CSiblingLogic() = default;
+};
+
+template<class TTrBase>
+class CIteratorTemplate;
+
+template<class TType>
+using CSiblingIteratorT = CIteratorTemplate<
+    CSiblingLogic<CDataReference<CBaseIterator<CIteratorDefines<TType>>>>>;
+
+template<class TTrBase>
+class CIteratorTemplate : public TTrBase {
+public:
+  using CBase = TTrBase;
+  using CData = typename CBase::CData;
+  using CHostTreePtr = typename CBase::CHostTreePtr;
+  using CNodePtr = typename CBase::CNode*;
+  using difference_type = typename CBase::difference_type;
+  using CChildIterator = CSiblingIteratorT<CData>;
+  using CIndex = typename CBase::CIndex;
+
+  using CMeNonConst = CIteratorTemplate<typename CBase::CMeNonConst>;
+
+  template<class TType>
+  friend class CVTree;
+
+  template<class TOtherBase>
+  friend class CIteratorTemplate;
+
+  CIteratorTemplate() = default;
+
+  CIteratorTemplate(const CMeNonConst& other)
+      : CBase(other.Host_, other.Current_) {
+  }
+
+  template<template<class> class TAnyLogic>
+  CIteratorTemplate(
+      const CIteratorTemplate<TAnyLogic<typename CBase::CBase>>& other)
+      : CBase(other.Host_, other.Current_) {
+  }
+
+protected:
+  CIteratorTemplate(CHostTreePtr HostTree, CIndex Handler)
+      : CBase(HostTree, Handler) {
+  }
+
+public:
+  CIteratorTemplate& operator++() {
+    CBase::setToNext();
+    return *this;
+  }
+  CIteratorTemplate operator++(int) {
+    CIteratorTemplate temp = *this;
+    ++*this;
+    return temp;
+  }
+  CIteratorTemplate& operator+=(difference_type Difference) {
+    CBase::moveByOffset(Difference);
+    return *this;
+  }
+  CIteratorTemplate& operator--() {
+    CBase::setToPrevious();
+    return *this;
+  }
+  CIteratorTemplate operator--(int) {
+    CIteratorTemplate temp = *this;
+    --*this;
+    return temp;
+  }
+  CIteratorTemplate& operator-=(difference_type Difference) {
+    CBase::moveByOffset(-Difference);
+    return *this;
+  }
+
+  template<class TOtherBase>
+  difference_type operator-(const CIteratorTemplate<TOtherBase>& other) const {
+    return CBase::subtract(other);
+  }
+
+  CChildIterator FirstChild() const {
+    return CChildIterator(CBase::Host_, CBase::firstChildIndex_());
+  }
+  CChildIterator LastChild() const {
+    return CChildIterator(CBase::Host_, CBase::lastChildIndex_());
+  }
+};
+
 // The vertices of the tree are stored in a vector.
 // The class invariants:
 // 1) the root is always the first element of the vector
@@ -121,6 +667,7 @@ public:
 
   //  using CData = typename CNode::CData;
   using CData = TType;
+  using CConstData = std::add_const_t<CData>;
   //  using CIndex = typename CNode::CIndex;
   using CIndex = int64_t;
   using CVTreeBase = std::vector<CNode>;
@@ -198,6 +745,7 @@ protected:
     return TreeBase_[Index].distanceToRoot();
   }
 
+public:
   const CData& data(CIndex Index) const {
     assert(isCorrect_(Index));
     return TreeBase_[Index].data();
@@ -263,6 +811,7 @@ protected:
     return TreeBase_[Index].distanceToRoot();
   }
 
+protected:
   bool hasParent_(CIndex Index) const {
     return parentIndex_(Index) != kUndefined;
   }
@@ -286,762 +835,49 @@ protected:
     return numberOfChildren_(Index) != 0;
   }
 
-  class CConstIteratorDefines {
-  public:
-    using value_type = const CData;
-    using difference_type = int64_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-    using CIndex = CIndex;
-    using CNode = const CNode;
-    using CHostTreePtr = const CVTree<CData>*;
-    using CNodeRef = CNode&;
-
-  protected:
-    ~CConstIteratorDefines() = default;
-  };
-
-  class CIteratorDefines {
-  public:
-    using value_type = CData;
-    using difference_type = int64_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-    using CIndex = CIndex;
-    using CNode = CNode;
-    using CHostTreePtr = CVTree<CData>*;
-    using CNodeRef = CNode&;
-
-  protected:
-    ~CIteratorDefines() = default;
-  };
-
-  template<class TIteratorDefines>
+  template<class TBase>
   friend class CBaseIterator;
 
-  template<class TIteratorDefines>
-  class CBaseIterator : public TIteratorDefines {
-  public:
-    template<class TOtherIteratorDefines>
-    friend class CBaseIterator;
-
-    using value_type = typename TIteratorDefines::value_type;
-    using difference_type = typename TIteratorDefines::difference_type;
-    using pointer = typename TIteratorDefines::pointer;
-    using reference = typename TIteratorDefines::reference;
-    using CIndex = typename TIteratorDefines::CIndex;
-    using CHostTreePtr = typename TIteratorDefines::CHostTreePtr;
-    using CNode = typename TIteratorDefines::CNode;
-
-    CBaseIterator() = default;
-    CBaseIterator(CHostTreePtr HostTree, CIndex Current)
-        : Host_(HostTree), Current_(Current) {
-    }
-    CBaseIterator(const CBaseIterator& other) = default;
-    CBaseIterator(CBaseIterator&& other) noexcept
-        : Host_(std::move(other.Host_)), Current_(std::move(other.Current_)) {
-      other.Host_ = nullptr;
-      other.Current_ = kUndefined;
-    }
-    CBaseIterator& operator=(const CBaseIterator& other) = default;
-    CBaseIterator& operator=(CBaseIterator&& other) noexcept {
-      Host_ = std::move(other.Host_);
-      Current_ = std::move(other.Current_);
-      other.Host_ = nullptr;
-      other.Current_ = kUndefined;
-      return *this;
-    }
-
-    template<class TIterDefs>
-    bool operator==(const CBaseIterator<TIterDefs>& Iterator) const {
-      return Host_ == Iterator.Host_ && Current_ == Iterator.Current_;
-    }
-    template<class TIterDefs>
-    bool operator!=(const CBaseIterator<TIterDefs>& Iterator) const {
-      return !(*this == Iterator);
-    }
-
-    bool isDefined() const {
-      return isHostDefined_() && isCorrect_();
-    }
-    bool isRoot() const {
-      return isHostDefined_() && Host_->isRoot_(Current_);
-    }
-    bool isLeaf() const {
-      return isHostDefined_() && isCorrect_() && !Host_->hasChildren_(Current_);
-    }
-    bool hasParent() const {
-      return isHostDefined_() && isCorrect_() && Host_->hasParent_(Current_);
-    }
-    bool hasChildren() const {
-      return isHostDefined_() && isCorrect_() && Host_->hasChildren_(Current_);
-    }
-    bool hasNextSibling() const {
-      return isHostDefined_() && isCorrect_() &&
-             Host_->hasNextSibling_(Current_);
-    }
-    bool hasPreviousSibling() const {
-      return isHostDefined_() && isCorrect_() &&
-             Host_->hasPreviousSibling_(Current_);
-    }
-
-    CIndex getNumberOfChildren() const {
-      if (isDefined())
-        return Host_->numberOfChildren_(Current_);
-      return 0;
-    }
-    CIndex getSizeOfSubTree() const {
-      if (!isDefined())
-        return 0;
-      return getSubTreeEndHandler() - Current_;
-    }
-    CIndex getNumberOfSiblings() const {
-      if (!hasParent())
-        return 0;
-      return Host_->numberOfChildren_(Host_->parentIndex(Current_)) - 1;
-    }
-    CIndex getLengthOfSubTree() const {
-      if (!isDefined())
-        return 0;
-      CIndex EndHandler = getSubTreeEndHandler();
-      CIndex MaxDistanceToRoot = 0;
-      for (CIndex Current = Current_; Current != EndHandler; ++Current)
-        MaxDistanceToRoot =
-            std::max(MaxDistanceToRoot, Host_->distanceToRoot(Current));
-      return MaxDistanceToRoot - Host_->distanceToRoot(Current_) + 1;
-    }
-    CIndex getNumberOfLeaves() const {
-      if (!isDefined())
-        return 0;
-      CIndex EndHandler = getSubTreeEndHandler();
-      CIndex NumberOfLeaves = 0;
-      for (CIndex Current = Current_; Current != EndHandler; ++Current)
-        if (!Host_->hasChildren_(Current))
-          ++NumberOfLeaves;
-      assert(NumberOfLeaves > 0);
-      return NumberOfLeaves;
-    }
-    CIndex getDistanceToRoot() const {
-      if (!isDefined())
-        return 0;
-      return Host_->distanceToRoot(Current_);
-    }
-    CIndex getHostSize() const {
-      if (!isDefined())
-        return 0;
-      return Host_->size();
-    }
-
-    void setToParent() {
-      assert(hasParent());
-      Current_ = parentIndex_();
-    }
-    void setToFirstChild() {
-      assert(hasChildren());
-      Current_ = firstChildIndex_();
-    }
-    void setToLastChild() {
-      assert(hasChildren());
-      Current_ = lastChildIndex_();
-    }
-    void setToNextSibling() {
-      assert(hasNextSibling());
-      Current_ = nextSiblingIndex_();
-    }
-    void setToPreviousSibling() {
-      assert(hasPreviousSibling());
-      Current_ = previousSiblingIndex_();
-    }
-
-    void addLastChild(const value_type& NodeData) {
-      assert(!hasNextSibling());
-      CIndex NewNodePosition = getHostSize();
-      (Host_->TreeBase_).emplace_back(NodeData, getDistanceToRoot() + 1);
-      if (isLeaf()) {
-        firstChildIndex() = NewNodePosition;
-        lastChildIndex() = NewNodePosition;
-        Host_->parentIndex(NewNodePosition) = Current_;
-      } else {
-        Host_->nextSiblingIndex(lastChildIndex_()) = NewNodePosition;
-        Host_->previousSiblingIndex(NewNodePosition) = lastChildIndex_();
-        Host_->parentIndex(NewNodePosition) = Current_;
-        lastChildIndex() = NewNodePosition;
-      }
-      ++numberOfChildren();
-    }
-    void addLastChild(value_type&& NodeData) {
-      assert(!hasNextSibling());
-      CIndex NewNodePosition = getHostSize();
-      (Host_->TreeBase_)
-          .emplace_back(std::move(NodeData), getDistanceToRoot() + 1);
-      if (isLeaf()) {
-        firstChildIndex() = NewNodePosition;
-        lastChildIndex() = NewNodePosition;
-        Host_->parentIndex(NewNodePosition) = Current_;
-      } else {
-        Host_->nextSiblingIndex(lastChildIndex_()) = NewNodePosition;
-        Host_->previousSiblingIndex(NewNodePosition) = lastChildIndex_();
-        Host_->parentIndex(NewNodePosition) = Current_;
-        lastChildIndex() = NewNodePosition;
-      }
-      ++numberOfChildren();
-    }
-
-    //    void changeHost(CHostTreePtr Host) {
-    //      Host_ = Host;
-    //    }
-
-  protected:
-    bool isHostDefined_() const {
-      return Host_ != nullptr;
-    }
-    bool isCurrentInFullRange_() const {
-      return 0 <= Current_ && Current_ <= Host_->size();
-    }
-    bool isCorrect_() const {
-      return Host_->isCorrect_(Current_);
-    }
-
-    CIndex parentIndex() const {
-      return Host_->parentIndex(Current_);
-    }
-    CIndex& parentIndex() {
-      return Host_->parentIndex(Current_);
-    }
-    CIndex firstChildIndex() const {
-      return Host_->firstChildIndex(Current_);
-    }
-    CIndex& firstChildIndex() {
-      return Host_->firstChildIndex(Current_);
-    }
-    CIndex lastChildIndex() const {
-      return Host_->lastChildIndex(Current_);
-    }
-    CIndex& lastChildIndex() {
-      return Host_->lastChildIndex(Current_);
-    }
-    CIndex previousSiblingIndex() const {
-      return Host_->previousSiblingIndex(Current_);
-    }
-    CIndex& previousSiblingIndex() {
-      return Host_->previousSiblingIndex(Current_);
-    }
-    CIndex nextSiblingIndex() const {
-      return Host_->nextSiblingIndex(Current_);
-    }
-    CIndex& nextSiblingIndex() {
-      return Host_->nextSiblingIndex(Current_);
-    }
-
-    CIndex parentIndex_() const {
-      return Host_->parentIndex(Current_);
-    }
-    CIndex firstChildIndex_() const {
-      return Host_->firstChildIndex(Current_);
-    }
-    CIndex lastChildIndex_() const {
-      return Host_->lastChildIndex(Current_);
-    }
-    CIndex previousSiblingIndex_() const {
-      return Host_->previousSiblingIndex(Current_);
-    }
-    CIndex nextSiblingIndex_() const {
-      return Host_->nextSiblingIndex(Current_);
-    }
-
-    CIndex numberOfChildren() const {
-      return Host_->numberOfChildren(Current_);
-    }
-    CIndex& numberOfChildren() {
-      return Host_->numberOfChildren(Current_);
-    }
-
-    CIndex getSubTreeEndHandler() const {
-      CBaseIterator Current(*this);
-      while (!Current.isRoot() && !Current.hasNextSibling())
-        Current.setToParent();
-      if (Current.hasNextSibling())
-        return Current.nextSiblingIndex_();
-      return getHostSize();
-    }
-
-    CNode& getNode(const CIndex& Index) {
-      return (Host_->TreeBase_)[Index];
-    }
-    const CNode& getNode(const CIndex& Index) const {
-      return (Host_->TreeBase_)[Index];
-    }
-    CNode& getCurrentNode() {
-      return getNode(Current_);
-    }
-    const CNode& getCurrentNode() const {
-      return getNode(Current_);
-    }
-    CNode& getParentNode() {
-      return getNode(parentIndex_());
-    }
-    const CNode& getParentNode() const {
-      return getNode(parentIndex_());
-    }
-    CNode& getFirstChildNode() {
-      return getNode(firstChildIndex_());
-    }
-    const CNode& getFirstChildNode() const {
-      return getNode(firstChildIndex_());
-    }
-    CNode& getLastChildNode() {
-      return getNode(lastChildIndex_());
-    }
-    const CNode& getLastChildNode() const {
-      return getNode(lastChildIndex_());
-    }
-    CNode& getPreviousSiblingNode() {
-      return getNode(previousSiblingIndex_());
-    }
-    const CNode& getPreviousSiblingNode() const {
-      return getNode(previousSiblingIndex_());
-    }
-    CNode& getNextSiblingNode() {
-      return getNode(nextSiblingIndex_());
-    }
-    const CNode& getNextSiblingNode() const {
-      return getNode(nextSiblingIndex_());
-    }
-
-    ~CBaseIterator() = default;
-
-    CHostTreePtr Host_ = nullptr;
-    CIndex Current_ = 0;
-  };
-
-  template<class TBaseIterator>
-  class CNodeReference;
-
-  template<class TBaseIterator>
-  class CDataReference : public TBaseIterator {
-  public:
-    using CBase = TBaseIterator;
-    using reference = typename CBase::reference;
-    using pointer = typename CBase::pointer;
-
-    CDataReference() = default;
-
-    template<class TOtherBaseIterator>
-    friend class CDataReference;
-    template<class TOtherBaseIterator>
-    CDataReference(const CDataReference<TOtherBaseIterator>& other)
-        : CBase(other.Host_, other.Current_) {
-    }
-
-    template<class TOtherBaseIterator>
-    friend class CNodeReference;
-
-    using CBase::CBase;
-
-    reference operator*() const {
-      return CBase::Host_->data(CBase::Current_);
-    }
-    pointer operator->() const {
-      return &CBase::Host_->data(CBase::Current_);
-    }
-  };
-
 public:
-  using CConstBasicIterator =
-      CDataReference<CBaseIterator<CConstIteratorDefines>>;
+  using CConstBasicIterator = CBaseIterator<CIteratorDefines<CConstData>>;
+  using CBasicIterator = CBaseIterator<CIteratorDefines<CData>>;
 
-  using CBasicIterator = CDataReference<CBaseIterator<CIteratorDefines>>;
-
-protected:
-  template<class TBaseIterator>
-  class CNodeReference : public TBaseIterator {
-  public:
-    using CBase = TBaseIterator;
-    using CNodeRef = typename CBase::CNodeRef;
-    using CNodePtr = typename CBase::CNode*;
-
-    using CBase::CBase;
-
-    CNodeReference() = default;
-    CNodeReference(const CDataReference<TBaseIterator>& other)
-        : CBase(other.Host_, other.Current_) {
-    }
-
-    CNodeRef operator*() const {
-      return (CBase::Host_->TreeBase_)[CBase::Current_];
-    }
-    CNodePtr operator->() const {
-      return &((CBase::Host_->TreeBase_)[CBase::Current_]);
-    }
-  };
-
-  template<class TIteratorWithDereferencing>
-  class CPreOrderLogic : public TIteratorWithDereferencing {
-  public:
-    using CBase = TIteratorWithDereferencing;
-    using CHostTreePtr = typename CBase::CHostTreePtr;
-    // using CNodePtr = typename CBase::CNode*;
-    using CBase::CBase;
-
-    template<class TIterWithDeref>
-    bool operator<(const CPreOrderLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return false;
-      return CBase::Current_ < other.Current_;
-    }
-    template<class TIterWithDeref>
-    bool operator<=(const CPreOrderLogic<TIterWithDeref>& other) const {
-      return !(other < *this);
-    }
-    template<class TIterWithDeref>
-    bool operator>(const CPreOrderLogic<TIterWithDeref>& other) const {
-      return other < *this;
-    }
-    template<class TIterWithDeref>
-    bool operator>=(const CPreOrderLogic<TIterWithDeref>& other) const {
-      return !(*this < other);
-    }
-
-  protected:
-    void setToNext() {
-      assert(CBase::isHostDefined_());
-      ++CBase::Current_;
-    }
-    void setToPrevious() {
-      assert(CBase::isHostDefined_());
-      --CBase::Current_;
-    }
-    void moveByOffset(typename CBase::difference_type Offset) {
-      assert(CBase::isHostDefined_());
-      CBase::Current_ += Offset;
-      assert(CBase::isCurrentInFullRange_());
-    }
-    template<class TIterWithDeref>
-    typename CBase::difference_type
-    subtract(const CPreOrderLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return 0;
-      return CBase::Current_ - other.Current_;
-    }
-
-    ~CPreOrderLogic() = default;
-  };
-
-  template<class TIteratorWithDereferencing>
+  template<class TBase>
   friend class CPreOrderLogic;
 
-  template<class TIteratorWithDereferencing>
-  class CLastSonLogic : public TIteratorWithDereferencing {
-  public:
-    template<class TOtherIteratorWithDereferencing>
-    friend class CLastSonLogic;
-
-    using CBase = TIteratorWithDereferencing;
-    using CHostTreePtr = typename CBase::CHostTreePtr;
-    // using CNodePtr = typename CBase::CNode*;
-    using CBase::CBase;
-
-    template<class TIterWithDeref>
-    bool operator<(const CLastSonLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return false;
-      return CBase::Current_ < other.Current_;
-    }
-    template<class TIterWithDeref>
-    bool operator<=(const CLastSonLogic<TIterWithDeref>& other) const {
-      return !(other < *this);
-    }
-    template<class TIterWithDeref>
-    bool operator>(const CLastSonLogic<TIterWithDeref>& other) const {
-      return other < *this;
-    }
-    template<class TIterWithDeref>
-    bool operator>=(const CLastSonLogic<TIterWithDeref>& other) const {
-      return !(*this < other);
-    }
-
-  protected:
-    void setToNext() {
-      assert(CBase::isHostDefined_());
-      if (CBase::hasChildren())
-        CBase::setToLastChild();
-      else
-        CBase::Current_ = CBase::getHostSize();
-    }
-    void setToPrevious() {
-      assert(CBase::isHostDefined_());
-      if (CBase::isCorrect_()) {
-        assert(CBase::hasParent());
-        CBase::setToParent();
-      } else {
-        assert(CBase::Current_ > 0);
-        --(CBase::Current_);
-      }
-    }
-    void moveByOffset(typename CBase::difference_type Offset) {
-      assert(CBase::isHostDefined_());
-      while (Offset > 0) {
-        --Offset;
-        setToNext();
-      }
-      while (Offset < 0) {
-        ++Offset;
-        setToPrevious();
-      }
-      assert(CBase::isCurrentInFullRange_());
-    }
-    template<class TIterWithDeref>
-    typename CBase::difference_type
-    subtract(const CLastSonLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return 0;
-      typename CBase::difference_type difference = 0;
-      CLastSonLogic current = *this;
-      while (current < other) {
-        current.setToNext();
-        ++difference;
-      }
-      while (current > other) {
-        current.setToPrevious();
-        ++difference;
-      }
-      return difference;
-    }
-
-    ~CLastSonLogic() = default;
-  };
-
-  template<class TIteratorWithDereferencing>
+  template<class TBase>
   friend class CLastSonLogic;
 
-  template<class TIteratorWithDereferencing>
-  class CSiblingLogic : public TIteratorWithDereferencing {
-  public:
-    template<class TOtherIteratorWithDereferencing>
-    friend class CSiblingLogic;
-
-    using CBase = TIteratorWithDereferencing;
-    using CHostTreePtr = typename CBase::CHostTreePtr;
-    // using CNodePtr = typename CBase::CNode*;
-    using CBase::CBase;
-
-    template<class TIterWithDeref>
-    bool operator<(const CSiblingLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return false;
-      return CBase::Current_ < other.Current_;
-    }
-    template<class TIterWithDeref>
-    bool operator<=(const CSiblingLogic<TIterWithDeref>& other) const {
-      return !(other < *this);
-    }
-    template<class TIterWithDeref>
-    bool operator>(const CSiblingLogic<TIterWithDeref>& other) const {
-      return other < *this;
-    }
-    template<class TIterWithDeref>
-    bool operator>=(const CSiblingLogic<TIterWithDeref>& other) const {
-      return !(*this < other);
-    }
-
-  protected:
-    void setToNext() {
-      assert(CBase::hasNextSibling());
-      CBase::setToNextSibling();
-    }
-    void setToPrevious() {
-      assert(CBase::hasPreviousSibling());
-      CBase::setToPreviousSibling();
-    }
-    void moveByOffset(typename CBase::difference_type Offset) {
-      assert(CBase::isHostDefined_());
-      while (Offset > 0) {
-        --Offset;
-        setToNext();
-      }
-      while (Offset < 0) {
-        ++Offset;
-        setToPrevious();
-      }
-      assert(CBase::isCurrentInFullRange_());
-    }
-    template<class TIterWithDeref>
-    typename CBase::difference_type
-    subtract(const CSiblingLogic<TIterWithDeref>& other) const {
-      assert(CBase::Host_ == other.Host_);
-      if (!CBase::isHostDefined_())
-        return 0;
-      typename CBase::difference_type difference = 0;
-      auto current = *this;
-      while (current < other) {
-        current.setToNext();
-        ++difference;
-      }
-      while (current > other) {
-        current.setToPrevious();
-        ;
-        ++difference;
-      }
-      return difference;
-    }
-    ~CSiblingLogic() = default;
-  };
-
-  template<class TIteratorWithDereferencing>
+  template<class TBase>
   friend class CSiblingLogic;
 
-  template<class TIterratorWithTravellingLogic>
-  class CIteratorT : public TIterratorWithTravellingLogic {
-    using CBase = TIterratorWithTravellingLogic;
-
-  public:
-    using CBase::CBase;
-  };
-
-  // Should consider reimplementation in this fasion
-  //  template<class T>
-  //  class CIteratorT;
-
-  //  using CSiblingIteratorT=CIteratorT<CSiblingLogic<CBasicIterator>>;
-  //  using
-  //  CConstSiblingIteratorT=CIteratorT<CSiblingLogic<CConstBasicIterator>>;
-
-  template<template<class> class TReferenceLogic,
-           template<class> class TTravellingLogic, class TIteratorDefines>
-  class CIteratorTemplate;
-
-public:
-  using CConstSiblingIterator =
-      CIteratorTemplate<CDataReference, CSiblingLogic, CConstIteratorDefines>;
-
-  using CSiblingIterator =
-      CIteratorTemplate<CDataReference, CSiblingLogic, CIteratorDefines>;
-
-protected:
-  template<class TIteratorWithTravellingLogic, class TIteratorDefines>
-  class CIteratorChildren;
-
-  template<class TIteratorWithTravellingLogic>
-  class CIteratorChildren<TIteratorWithTravellingLogic, CIteratorDefines>
-      : public TIteratorWithTravellingLogic {
-  public:
-    using CChildIterator = CSiblingIterator;
-    using CBase = TIteratorWithTravellingLogic;
-    using CBase::CBase;
-  };
-
-  template<class TIteratorWithTravellingLogic>
-  class CIteratorChildren<TIteratorWithTravellingLogic, CConstIteratorDefines>
-      : public TIteratorWithTravellingLogic {
-  public:
-    using CChildIterator = CConstSiblingIterator;
-    using CBase = TIteratorWithTravellingLogic;
-    using CBase::CBase;
-  };
-
-  template<template<class> class TReferenceLogic,
-           template<class> class TTravellingLogic, class TIteratorDefines>
-  class CIteratorTemplate
-      : public CIteratorChildren<
-            TTravellingLogic<TReferenceLogic<CBaseIterator<TIteratorDefines>>>,
-            TIteratorDefines> {
-  public:
-    friend CVTree;
-    using CBase = CIteratorChildren<
-        TTravellingLogic<TReferenceLogic<CBaseIterator<TIteratorDefines>>>,
-        TIteratorDefines>;
-    using CHostTreePtr = typename CBase::CHostTreePtr;
-    using CNodePtr = typename CBase::CNode*;
-    using difference_type = typename CBase::difference_type;
-    using CChildIterator = typename CBase::CChildIterator;
-
-    template<template<class> class TOtherReferenceLogic,
-             template<class> class TOtherTravellingLogic,
-             class TOtherIteratorDefines>
-    friend class CIteratorTemplate;
-    template<template<class> class TOtherReferenceLogic,
-             template<class> class TOtherTravellingLogic,
-             class TOtherIteratorDefines>
-    CIteratorTemplate(
-        const CIteratorTemplate<TOtherReferenceLogic, TOtherTravellingLogic,
-                                TOtherIteratorDefines>& other)
-        : CBase(other.Host_, other.Current_) {
-    }
-    using CBase::CBase;
-    CIteratorTemplate() = default;
-
-  protected:
-    CIteratorTemplate(CHostTreePtr HostTree, CIndex Handler)
-        : CBase(HostTree, Handler) {
-    }
-
-  public:
-    CIteratorTemplate& operator++() {
-      CBase::setToNext();
-      return *this;
-    }
-    CIteratorTemplate operator++(int) {
-      CIteratorTemplate temp = *this;
-      ++*this;
-      return temp;
-    }
-    CIteratorTemplate& operator+=(difference_type Difference) {
-      CBase::moveByOffset(Difference);
-      return *this;
-    }
-    CIteratorTemplate& operator--() {
-      CBase::setToPrevious();
-      return *this;
-    }
-    CIteratorTemplate operator--(int) {
-      CIteratorTemplate temp = *this;
-      --*this;
-      return temp;
-    }
-    CIteratorTemplate& operator-=(difference_type Difference) {
-      CBase::moveByOffset(-Difference);
-      return *this;
-    }
-
-    template<template<class> class TOtherReferenceLogic,
-             class TOtherIteratorDefines>
-    difference_type
-    operator-(const CIteratorTemplate<TOtherReferenceLogic, TTravellingLogic,
-                                      TOtherIteratorDefines>& other) const {
-      return CBase::subtract(other);
-    }
-
-    CChildIterator FirstChild() const {
-      return CChildIterator(CBase::Host_, CBase::firstChildIndex_());
-    }
-    CChildIterator LastChild() const {
-      return CChildIterator(CBase::Host_, CBase::lastChildIndex_());
-    }
-  };
-  template<template<class> class TReferenceLogic,
-           template<class> class TTravellingLogic, class TIteratorDefines>
+  template<class TBase>
   friend class CIteratorTemplate;
 
 public:
+  using CConstDataPointer = CDataReference<CConstBasicIterator>;
+  using CDataPointer = CDataReference<CBasicIterator>;
+
   using CConstPreOrderIterator =
-      CIteratorTemplate<CDataReference, CPreOrderLogic, CConstIteratorDefines>;
+      CIteratorTemplate<CPreOrderLogic<CDataReference<CConstBasicIterator>>>;
 
   using CPreOrderIterator =
-      CIteratorTemplate<CDataReference, CPreOrderLogic, CIteratorDefines>;
+      CIteratorTemplate<CPreOrderLogic<CDataReference<CBasicIterator>>>;
 
   using CConstLastSonIterator =
-      CIteratorTemplate<CDataReference, CLastSonLogic, CConstIteratorDefines>;
+      CIteratorTemplate<CLastSonLogic<CDataReference<CConstBasicIterator>>>;
 
   using CLastSonIterator =
-      CIteratorTemplate<CDataReference, CLastSonLogic, CIteratorDefines>;
+      CIteratorTemplate<CLastSonLogic<CDataReference<CBasicIterator>>>;
 
   using CConstLastSonNodeIterator =
-      CIteratorTemplate<CNodeReference, CLastSonLogic, CConstIteratorDefines>;
+      CIteratorTemplate<CLastSonLogic<CNodeReference<CConstBasicIterator>>>;
+
+  using CConstSiblingIterator =
+      CIteratorTemplate<CSiblingLogic<CDataReference<CConstBasicIterator>>>;
+
+  using CSiblingIterator =
+      CIteratorTemplate<CSiblingLogic<CDataReference<CBasicIterator>>>;
 
   CConstPreOrderIterator beginPreOrder() const {
     return CConstPreOrderIterator(this, kRootIndex);
@@ -1168,6 +1004,272 @@ private:
   CVTreeBase TreeBase_;
 };
 
+template<class TBase>
+bool CBaseIterator<TBase>::isRoot() const {
+  return isHostDefined_() && Host_->isRoot_(Current_);
+}
+
+template<class TBase>
+bool CBaseIterator<TBase>::isLeaf() const {
+  return isHostDefined_() && isCorrect_() && !Host_->hasChildren_(Current_);
+}
+
+template<class TBase>
+bool CBaseIterator<TBase>::hasParent() const {
+  return isHostDefined_() && isCorrect_() && Host_->hasParent_(Current_);
+}
+
+template<class TBase>
+bool CBaseIterator<TBase>::hasChildren() const {
+  return isHostDefined_() && isCorrect_() && Host_->hasChildren_(Current_);
+}
+template<class TBase>
+bool CBaseIterator<TBase>::hasNextSibling() const {
+  return isHostDefined_() && isCorrect_() && Host_->hasNextSibling_(Current_);
+}
+
+template<class TBase>
+bool CBaseIterator<TBase>::hasPreviousSibling() const {
+  return isHostDefined_() && isCorrect_() &&
+         Host_->hasPreviousSibling_(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getNumberOfChildren() const {
+  if (isDefined())
+    return Host_->numberOfChildren_(Current_);
+  return 0;
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getSizeOfSubTree() const {
+  if (!isDefined())
+    return 0;
+  return getSubTreeEndHandler() - Current_;
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getNumberOfSiblings() const {
+  if (!hasParent())
+    return 0;
+  return Host_->numberOfChildren_(Host_->parentIndex(Current_)) - 1;
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getLengthOfSubTree() const {
+  if (!isDefined())
+    return 0;
+  CIndex EndHandler = getSubTreeEndHandler();
+  CIndex MaxDistanceToRoot = 0;
+  for (CIndex Current = Current_; Current != EndHandler; ++Current)
+    MaxDistanceToRoot =
+        std::max(MaxDistanceToRoot, Host_->distanceToRoot(Current));
+  return MaxDistanceToRoot - Host_->distanceToRoot(Current_) + 1;
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getNumberOfLeaves() const {
+  if (!isDefined())
+    return 0;
+  CIndex EndHandler = getSubTreeEndHandler();
+  CIndex NumberOfLeaves = 0;
+  for (CIndex Current = Current_; Current != EndHandler; ++Current)
+    if (!Host_->hasChildren_(Current))
+      ++NumberOfLeaves;
+  assert(NumberOfLeaves > 0);
+  return NumberOfLeaves;
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getDistanceToRoot() const {
+  if (!isDefined())
+    return 0;
+  return Host_->distanceToRoot(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::getHostSize() const {
+  if (!isDefined())
+    return 0;
+  return Host_->size();
+}
+
+template<class TBase>
+void CBaseIterator<TBase>::addLastChild(const value_type& NodeData) {
+  assert(!hasNextSibling());
+  CIndex NewNodePosition = getHostSize();
+  (Host_->TreeBase_).emplace_back(NodeData, getDistanceToRoot() + 1);
+  if (isLeaf()) {
+    firstChildIndex() = NewNodePosition;
+    lastChildIndex() = NewNodePosition;
+    Host_->parentIndex(NewNodePosition) = Current_;
+  } else {
+    Host_->nextSiblingIndex(lastChildIndex_()) = NewNodePosition;
+    Host_->previousSiblingIndex(NewNodePosition) = lastChildIndex_();
+    Host_->parentIndex(NewNodePosition) = Current_;
+    lastChildIndex() = NewNodePosition;
+  }
+  ++numberOfChildren();
+}
+
+template<class TBase>
+void CBaseIterator<TBase>::addLastChild(value_type&& NodeData) {
+  assert(!hasNextSibling());
+  CIndex NewNodePosition = getHostSize();
+  (Host_->TreeBase_).emplace_back(std::move(NodeData), getDistanceToRoot() + 1);
+  if (isLeaf()) {
+    firstChildIndex() = NewNodePosition;
+    lastChildIndex() = NewNodePosition;
+    Host_->parentIndex(NewNodePosition) = Current_;
+  } else {
+    Host_->nextSiblingIndex(lastChildIndex_()) = NewNodePosition;
+    Host_->previousSiblingIndex(NewNodePosition) = lastChildIndex_();
+    Host_->parentIndex(NewNodePosition) = Current_;
+    lastChildIndex() = NewNodePosition;
+  }
+  ++numberOfChildren();
+}
+
+template<class TBase>
+bool CBaseIterator<TBase>::isCurrentInFullRange_() const {
+  return 0 <= Current_ && Current_ <= Host_->size();
+}
+template<class TBase>
+bool CBaseIterator<TBase>::isCorrect_() const {
+  return Host_->isCorrect_(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::parentIndex() const {
+  return Host_->parentIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex& CBaseIterator<TBase>::parentIndex() {
+  return Host_->parentIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::firstChildIndex() const {
+  return Host_->firstChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex& CBaseIterator<TBase>::firstChildIndex() {
+  return Host_->firstChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::lastChildIndex() const {
+  return Host_->lastChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex& CBaseIterator<TBase>::lastChildIndex() {
+  return Host_->lastChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::previousSiblingIndex() const {
+  return Host_->previousSiblingIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex&
+CBaseIterator<TBase>::previousSiblingIndex() {
+  return Host_->previousSiblingIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::nextSiblingIndex() const {
+  return Host_->nextSiblingIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex&
+CBaseIterator<TBase>::nextSiblingIndex() {
+  return Host_->nextSiblingIndex(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::parentIndex_() const {
+  return Host_->parentIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::firstChildIndex_() const {
+  return Host_->firstChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::lastChildIndex_() const {
+  return Host_->lastChildIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::previousSiblingIndex_() const {
+  return Host_->previousSiblingIndex(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::nextSiblingIndex_() const {
+  return Host_->nextSiblingIndex(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex
+CBaseIterator<TBase>::numberOfChildren() const {
+  return Host_->numberOfChildren(Current_);
+}
+template<class TBase>
+typename CBaseIterator<TBase>::CIndex&
+CBaseIterator<TBase>::numberOfChildren() {
+  return Host_->numberOfChildren(Current_);
+}
+
+template<class TBase>
+typename CBaseIterator<TBase>::CNode&
+CBaseIterator<TBase>::getNode(const CIndex& Index) {
+  return (Host_->TreeBase_)[Index];
+}
+template<class TBase>
+const typename CBaseIterator<TBase>::CNode&
+CBaseIterator<TBase>::getNode(const CIndex& Index) const {
+  return (Host_->TreeBase_)[Index];
+}
+
+// template<class TBase>
+// template<class TOtherBase, class>
+// CDataReference<TBase>::CDataReference(const CDataReference<TOtherBase>&
+// other)
+//    : CBase(other.Host_, other.Current_) {
+//}
+
+template<class TBase>
+typename CDataReference<TBase>::reference
+CDataReference<TBase>::operator*() const {
+  return CBase::Host_->data(CBase::Current_);
+}
+template<class TBase>
+typename CDataReference<TBase>::pointer
+CDataReference<TBase>::operator->() const {
+  return &CBase::Host_->data(CBase::Current_);
+}
+
+template<class TBase>
+typename CNodeReference<TBase>::CNodeRef
+CNodeReference<TBase>::operator*() const {
+  return (CBase::Host_->TreeBase_)[CBase::Current_];
+}
+template<class TBase>
+typename CNodeReference<TBase>::CNodePtr
+CNodeReference<TBase>::operator->() const {
+  return &((CBase::Host_->TreeBase_)[CBase::Current_]);
+}
 } // namespace NSLibrary
 
 #endif // VTREE_H
