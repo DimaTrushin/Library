@@ -30,13 +30,13 @@ public:
     Data_.max_load_factor(1.);
   }
 
-  bool insert(const TKey key, TData&& data) {
+  std::pair<iterator, bool> insert(const TKey key, TData&& data) {
     if (Data_.empty()) {
       auto pair = Data_.emplace(
           key, CCacherNode<TKey, TData>{nullptr, std::move(data)});
       First_ = &*pair.first;
       Last_ = First_;
-      return pair.second;
+      return pair;
     } else {
       if (size() == max_size())
         delete_last();
@@ -46,7 +46,7 @@ public:
         First_->second.Next = &*pair.first;
         First_ = First_->second.Next;
       }
-      return pair.second;
+      return pair;
     }
   }
 
