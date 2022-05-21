@@ -37,6 +37,9 @@ public:
   size_t size() const {
     return Data_.size();
   }
+  void clear() {
+    Data_.clear();
+  }
 
   iterator begin() {
     return Data_.begin();
