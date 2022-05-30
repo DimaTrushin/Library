@@ -31,6 +31,11 @@ public:
   const Type& top() const {
     return Data_.front();
   }
+  Type extract() {
+    Type element = std::move(Data_.front());
+    pop();
+    return element;
+  }
   bool empty() const {
     return Data_.empty();
   }
