@@ -37,8 +37,9 @@ class CModelWrapper : public CBasicWrapper<TImpl> {
   using CBase = CBasicWrapper<TImpl>;
 
 public:
+  using CImpl = TImpl;
   using CBase::CBase;
-  TImpl* model() const {
+  CImpl* model() const {
     return CBase::Impl_.get();
   }
 };
