@@ -26,7 +26,7 @@ public:
   static_assert(static_cast<CType>(Enum::Active) == 0,
                 "Enum must contain \'Active = 0\'");
 
-  bool isActive() {
+  bool isActive() const {
     return Flags_ == static_cast<CType>(CBase::Enum::Active);
   }
 
