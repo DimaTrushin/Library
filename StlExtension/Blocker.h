@@ -30,6 +30,10 @@ public:
     return Flags_ == static_cast<CType>(CBase::Enum::Active);
   }
 
+  void switchBlock(Enum Blocker) {
+    Flags_ ^= static_cast<CType>(Blocker);
+  }
+
   void activate(Enum Blocker) {
     assert(Blocker != CBase::Enum::Active);
     Flags_ &= static_cast<CType>(-1) ^ static_cast<CType>(Blocker);
