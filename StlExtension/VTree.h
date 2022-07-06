@@ -592,6 +592,8 @@ public:
 
   CIteratorTemplate() = default;
 
+  template<
+      class = std::enable_if_t<!std::is_same_v<CIteratorTemplate, CMeNonConst>>>
   CIteratorTemplate(const CMeNonConst& other)
       : CBase(other.Host_, other.Current_) {
   }
