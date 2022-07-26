@@ -61,10 +61,11 @@ public:
   using CData = TData;
   using CMethod = std::function<void(CArgType)>;
 
-  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify,
-                       CMethod OnUnsubscribe)
-      : OnSubscribe_(std::move(OnSubscribe)), OnNotify_(std::move(OnNotify)),
-        OnUnsubscribe_(std::move(OnUnsubscribe)) {
+  template<class T1, class T2, class T3>
+  CObserverReactorImpl(T1&& OnSubscribe, T2&& OnNotify, T3&& OnUnsubscribe)
+      : OnSubscribe_(std::forward<T1>(OnSubscribe)),
+        OnNotify_(std::forward<T2>(OnNotify)),
+        OnUnsubscribe_(std::forward<T3>(OnUnsubscribe)) {
     assert(OnSubscribe_);
     assert(OnNotify_);
     assert(OnUnsubscribe_);
@@ -108,10 +109,11 @@ public:
   using CData = void;
   using CMethod = std::function<void(void)>;
 
-  CObserverReactorImpl(CMethod OnSubscribe, CMethod OnNotify,
-                       CMethod OnUnsubscribe)
-      : OnSubscribe_(std::move(OnSubscribe)), OnNotify_(std::move(OnNotify)),
-        OnUnsubscribe_(std::move(OnUnsubscribe)) {
+  template<class T1, class T2, class T3>
+  CObserverReactorImpl(T1&& OnSubscribe, T2&& OnNotify, T3&& OnUnsubscribe)
+      : OnSubscribe_(std::forward<T1>(OnSubscribe)),
+        OnNotify_(std::forward<T2>(OnNotify)),
+        OnUnsubscribe_(std::forward<T3>(OnUnsubscribe)) {
     assert(OnSubscribe_);
     assert(OnNotify_);
     assert(OnUnsubscribe_);

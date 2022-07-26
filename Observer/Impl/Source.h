@@ -22,7 +22,8 @@ public:
   using CGetAction = std::function<CGetSignature>;
 
   CSource() = default;
-  CSource(CGetAction Action) : GetAction_(std::move(Action)) {
+  template<class TGetAction>
+  CSource(TGetAction&& Action) : GetAction_(std::forward<TGetAction>(Action)) {
     assert(hasGetter());
   }
 

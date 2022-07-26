@@ -133,7 +133,9 @@ public:
   };
 
   CConnectorImpl() = default;
-  CConnectorImpl(CGetAction Action) : Source_(std::move(Action)) {
+  template<class TGetAction>
+  CConnectorImpl(TGetAction&& Action)
+      : Source_(std::forward<TGetAction>(Action)) {
     assert(Source_.hasGetter());
   }
 
