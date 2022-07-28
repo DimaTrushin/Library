@@ -13,6 +13,7 @@ public:
 
   using CConnection = typename CObservable<CData, CSendBy>::CConnection;
   using CDataType = typename CObservable<CData, CSendBy>::CDataType;
+  using CGetType = typename CObservable<CData, CSendBy>::CGetType;
 
   using CSignature = void(CDataType);
   using CAction = std::function<CSignature>;
