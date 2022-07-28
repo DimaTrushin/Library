@@ -64,6 +64,18 @@ public:
 };
 
 template<class TData, class TSendBy = AutoSendBy<TData>>
+class CInput : public CObserver<TData, TSendBy> {
+  using CBase = CObserver<TData, TSendBy>;
+
+public:
+  template<class T1, class T2>
+  explicit CInput(T1&& OnSubscribe, T2&& OnNotify)
+      : CBase(std::forward<T1>(OnSubscribe), std::forward<T2>(OnNotify),
+              CBase::doNothing) {
+  }
+};
+
+template<class TData, class TSendBy = AutoSendBy<TData>>
 class CHotInput : public CObserver<TData, TSendBy> {
   using CBase = CObserver<TData, TSendBy>;
 
