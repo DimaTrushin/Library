@@ -45,7 +45,7 @@ void CObservable<TData, TSendBy>::unsubscribeAll() {
   }
 }
 
-void CObservable<void, void>::subscribe(CObserver* obs) {
+inline void CObservable<void, void>::subscribe(CObserver* obs) {
   assert(obs);
   if (obs->isSubscribed())
     obs->unsubscribe();
@@ -54,12 +54,12 @@ void CObservable<void, void>::subscribe(CObserver* obs) {
   obs->onSubscribe();
 }
 
-void CObservable<void, void>::notify() {
+inline void CObservable<void, void>::notify() {
   for (auto obs : Observers_)
     obs->onNotify();
 }
 
-void CObservable<void, void>::CConnection::unsubscribe() {
+inline void CObservable<void, void>::CConnection::unsubscribe() {
   if (!isSubscribed())
     return;
   assert(Observer_);
@@ -70,7 +70,7 @@ void CObservable<void, void>::CConnection::unsubscribe() {
   Observer_ = nullptr;
 }
 
-void CObservable<void, void>::unsubscribeAll() {
+inline void CObservable<void, void>::unsubscribeAll() {
   while (!Observers_.empty()) {
     assert(Observers_.front());
     Observers_.front()->unsubscribe();

@@ -45,8 +45,8 @@ public:
     return Source_();
   }
 
-  void subscribe(CObserver* obs);
-  void notify();
+  inline void subscribe(CObserver* obs);
+  inline void notify();
 
   class CConnection {
   public:
@@ -63,7 +63,7 @@ public:
       return Observer_ != nullptr;
     }
 
-    void unsubscribe();
+    inline void unsubscribe();
 
     bool hasData() const {
       return isSubscribed() && Source_->hasData();
@@ -84,7 +84,7 @@ private:
     return CConnection(obs, &Source_, &Observers_);
   }
 
-  void unsubscribeAll();
+  inline void unsubscribeAll();
 
   CSource Source_;
   CObserversContainer Observers_;
