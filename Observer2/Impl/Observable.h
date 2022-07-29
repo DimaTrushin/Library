@@ -79,12 +79,13 @@ public:
     CObserversContainer* Observers_ = nullptr;
   };
 
+protected:
+  inline void unsubscribeAll();
+
 private:
   CConnection makeConnection(CObserver* obs) {
     return CConnection(obs, &Source_, &Observers_);
   }
-
-  inline void unsubscribeAll();
 
   CSource Source_;
   CObserversContainer Observers_;

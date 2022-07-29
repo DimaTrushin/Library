@@ -27,28 +27,48 @@ protected:
 } // namespace NSCObservalbeDataDetail
 
 template<class TData, class TSendBy = AutoSendBy<TData>>
-class CObservableData : protected NSCObservalbeDataDetail::CStorage<TData>,
-                        protected CObservable<TData, TSendBy> {
-  using CStorageBase = NSCObservalbeDataDetail::CStorage<TData>;
-  using CObservableBase = CObservable<TData, TSendBy>;
+class CObservableMono : protected CObservable<TData, TSendBy> {
+  using CBase = CObservable<TData, TSendBy>;
 
 public:
   using CData = TData;
   using CSendBy = TSendBy;
 
-  using CObserver = typename CObservableBase::CObserver;
+  using CObserver = typename CBase::CObserver;
 
-  using CSource = typename CObservableBase::CSource;
+  using CSource = typename CBase::CSource;
   using CSendWrapper = typename CSource::CSendWrapper;
 
   using CDataType = typename CSource::CDataType;
   using CGetType = typename CSource::CGetType;
 
+  using CBase::CBase;
+
+  using CBase::data_;
+  using CBase::hasData;
+  using CBase::notify;
+
+  void subscribe(typename CBase::CObserver* obs) {
+    CBase::unsubscribeAll();
+    CBase::subscribe(obs);
+  }
+};
+
+namespace NSCObservalbeDataDetail {
+
+template<class TData, class TSendBy,
+         template<class T1, class T2> class TObservable>
+class CObservableDataImpl : protected NSCObservalbeDataDetail::CStorage<TData>,
+                            public TObservable<TData, TSendBy> {
+  using CStorageBase = NSCObservalbeDataDetail::CStorage<TData>;
+  using CObservableBase = TObservable<TData, TSendBy>;
+
+public:
   template<class... TArgs>
-  explicit CObservableData(TArgs&&... args)
+  explicit CObservableDataImpl(TArgs&&... args)
       : CStorageBase(std::forward<TArgs>(args)...),
-        CObservableBase(
-            [&Data = CStorageBase::Data_]() -> CGetType { return Data; }) {
+        CObservableBase([&Data = CStorageBase::Data_]() ->
+                        typename CObservableBase::CGetType { return Data; }) {
   }
 
   template<class... TArgs>
@@ -56,12 +76,17 @@ public:
     CStorageBase::set(std::forward<TArgs>(args)...);
     CObservableBase::notify();
   }
-
-  using CObservableBase::data_;
-  using CObservableBase::hasData;
-  using CObservableBase::notify;
-  using CObservableBase::subscribe;
 };
+} // namespace NSCObservalbeDataDetail
+
+template<class TData, class TSendBy = AutoSendBy<TData>>
+using CObservableData =
+    NSCObservalbeDataDetail::CObservableDataImpl<TData, TSendBy, CObservable>;
+
+template<class TData, class TSendBy = AutoSendBy<TData>>
+using CObservableDataMono =
+    NSCObservalbeDataDetail::CObservableDataImpl<TData, TSendBy,
+                                                 CObservableMono>;
 
 template<class TData, class TSendBy = AutoSendBy<TData>>
 class CInput : public CObserver<TData, TSendBy> {
@@ -96,7 +121,5 @@ public:
       : CBase(CBase::doNothing, std::forward<T>(Action), CBase::doNothing) {
   }
 };
-
 } // namespace NSLibrary
-
 #endif // LIBRARY_OBSERVER_H
