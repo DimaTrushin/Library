@@ -582,8 +582,6 @@ public:
   using CChildIterator = CSiblingIteratorT<CData>;
   using CIndex = typename CBase::CIndex;
 
-  using CMeNonConst = CIteratorTemplate<typename CBase::CMeNonConst>;
-
   template<class TType>
   friend class CVTree;
 
@@ -592,15 +590,10 @@ public:
 
   CIteratorTemplate() = default;
 
-  template<
-      class = std::enable_if_t<!std::is_same_v<CIteratorTemplate, CMeNonConst>>>
-  CIteratorTemplate(const CMeNonConst& other)
-      : CBase(other.Host_, other.Current_) {
-  }
-
-  template<template<class> class TAnyLogic>
-  CIteratorTemplate(
-      const CIteratorTemplate<TAnyLogic<typename CBase::CBase>>& other)
+  template<class TImpl,
+           class = std::enable_if_t<std::is_const_v<CData> ||
+                                    !std::is_const_v<typename TImpl::CData>>>
+  CIteratorTemplate(const CIteratorTemplate<TImpl>& other)
       : CBase(other.Host_, other.Current_) {
   }
 
