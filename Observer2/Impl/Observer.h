@@ -46,15 +46,15 @@ public:
   }
 
   void onSubscribe(CDataType Data) {
-    OnSubscribe_(Data);
+    OnSubscribe_(std::move(Data));
   }
 
   void onNotify(CDataType Data) {
-    OnNotify_(Data);
+    OnNotify_(std::move(Data));
   }
 
   void onUnsubscribe(CDataType Data) {
-    OnUnsubscribe_(Data);
+    OnUnsubscribe_(std::move(Data));
   }
 
   void unsubscribe() {
