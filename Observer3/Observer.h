@@ -107,7 +107,10 @@ public:
   bool isSubscribed() const {
     return Observable_ != nullptr;
   }
-
+  bool hasData() const {
+    return isSubscribed();
+  }
+  CDataSentBy data() const;
   static void doNothing(CDataSentBy) {
   }
 
@@ -179,6 +182,21 @@ private:
   CGetAction Data_;
   CListeners Listeners_;
 };
+
+template<class TData, class TSendBy>
+void CObserver<TData, TSendBy>::unsubscribe() {
+  if (!isSubscribed())
+    return;
+  Observable_->detach_(this);
+  Observable_ = nullptr;
+}
+
+template<class TData, class TSendBy>
+typename CObserver<TData, TSendBy>::CDataSentBy
+CObserver<TData, TSendBy>::data() const {
+  assert(Observable_);
+  return Observable_->Data_();
+}
 
 template<>
 class CObserver<void, void> {
@@ -280,14 +298,6 @@ private:
   }
   CListeners Listeners_;
 };
-
-template<class TData, class TSendBy>
-void CObserver<TData, TSendBy>::unsubscribe() {
-  if (!isSubscribed())
-    return;
-  Observable_->detach_(this);
-  Observable_ = nullptr;
-}
 
 inline void CObserver<void, void>::unsubscribe() {
   if (!isSubscribed())
