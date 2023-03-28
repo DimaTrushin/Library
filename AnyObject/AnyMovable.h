@@ -139,7 +139,7 @@ public:
     return pIObject_.get();
   }
 
-  TInterface<IEmpty>* operator->() const {
+  const TInterface<IEmpty>* operator->() const {
     return pIObject_.get();
   }
 
