@@ -372,6 +372,7 @@ public:
   using CBase::CBase;
 
   using CBase::notify;
+  using CBase::unsubscribeAll;
 
   void subscribe(CObserver* obs) {
     CBase::unsubscribeAll();
