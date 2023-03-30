@@ -369,6 +369,9 @@ class CObservableMono : protected CObservable<TData, TSendBy> {
   using CObserver = CObserver<CData, CSendBy>;
 
 public:
+  using CBase::CGetType;
+  using CBase::CReturn;
+
   using CBase::CBase;
 
   using CBase::notify;
