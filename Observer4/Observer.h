@@ -161,7 +161,7 @@ class CObservable {
   friend CObserver;
 
 public:
-  using CGetData = CStoredData;
+  using CGetType = CStoredData;
   using CReturn = CDataSentBy;
 
   template<class TF>
@@ -393,7 +393,7 @@ public:
   explicit CObservableDataImpl(TArgs&&... args)
       : CStorageBase(std::forward<TArgs>(args)...),
         CObservableBase([&Data = CStorageBase::Data_]() ->
-                        typename CObservableBase::CGetData { return Data; }) {
+                        typename CObservableBase::CGetType { return Data; }) {
   }
 
   template<class... TArgs>
