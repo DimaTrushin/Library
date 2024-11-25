@@ -3,6 +3,8 @@
 #include "Alias.h"
 #include "ElementContainer.h"
 
+#include <cinttypes>
+
 namespace NSLibrary {
 namespace Loop {
 
