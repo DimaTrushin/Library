@@ -153,21 +153,30 @@ using Append =
 template<class TContainer, class... TTypes>
 using PushBack = Append<TContainer, TTypes...>;
 //--------------------------------------------------------------------------------
-// Prepend = PushFront
+// Prepend1
 //--------------------------------------------------------------------------------
 
 namespace NSTypeContainerDetail {
-
 template<class TType, class TContainer>
-struct Prepend1Impl;
+struct Prepend1Impl {
+  static_assert(isTypeContainer<TContainer>,
+                "Second argument of Prepend1 MUST be a type container!");
+};
 
 template<class TType, template<class...> class TContainer, class... TTypes>
 struct Prepend1Impl<TType, TContainer<TTypes...>> {
   using type = TContainer<TType, TTypes...>;
 };
-template<class TType, class TContainer>
-using Prepend1 = typename Prepend1Impl<TType, TContainer>::type;
+} // namespace NSTypeContainerDetail
 
+template<class TType, class TContainer>
+using Prepend1 =
+    typename NSTypeContainerDetail::Prepend1Impl<TType, TContainer>::type;
+//--------------------------------------------------------------------------------
+// Prepend = PushFront
+//--------------------------------------------------------------------------------
+
+namespace NSTypeContainerDetail {
 template<class TType, class... TTypes>
 struct PrependImpl {
   using type = Prepend1<TType, typename PrependImpl<TTypes...>::type>;
