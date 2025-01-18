@@ -620,6 +620,51 @@ struct MapImpl<TF, TContainer<TTypes...>> {
 template<template<class> class TF, class TContainer>
 using Map = typename NSTypeContainerDetail::MapImpl<TF, TContainer>::type;
 //--------------------------------------------------------------------------------
+// Filter
+//--------------------------------------------------------------------------------
+
+namespace NSTypeContainerDetail {
+template<class T, class Condition = std::true_type>
+struct HasBooleanMemberValueT : std::false_type {};
+
+template<class T>
+struct HasBooleanMemberValueT<
+    T, std::integral_constant<
+           bool, std::is_same_v<std::remove_cv_t<decltype(T::value)>, bool>>>
+    : std::true_type {};
+
+template<class T>
+constexpr bool HasBooleanMemberValue = HasBooleanMemberValueT<T>::value;
+
+template<template<class> class TFilter, class TContainer>
+struct FilterImpl {
+  static_assert(TC::isTypeContainer<TContainer>,
+                "Second argument of Filter MUST be a type container!");
+};
+
+template<template<class> class TFilter, template<class...> class TContainer,
+         class TType1, class... TTypes>
+struct FilterImpl<TFilter, TContainer<TType1, TTypes...>> {
+  static_assert(HasBooleanMemberValue<TFilter<TType1>>,
+                "First argument of Filter MUST be a predicate!");
+
+private:
+  using Tail = typename FilterImpl<TFilter, TContainer<TTypes...>>::type;
+
+public:
+  using type = IfElse<TFilter<TType1>::value, Prepend1<TType1, Tail>, Tail>;
+};
+
+template<template<class> class TFilter, template<class...> class TContainer>
+struct FilterImpl<TFilter, TContainer<>> {
+  using type = TContainer<>;
+};
+} // namespace NSTypeContainerDetail
+
+template<template<class> class TFilter, class TContainer>
+using Filter =
+    typename NSTypeContainerDetail::FilterImpl<TFilter, TContainer>::type;
+//--------------------------------------------------------------------------------
 // PowerSet
 //--------------------------------------------------------------------------------
 
